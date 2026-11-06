@@ -323,6 +323,12 @@ Keep a local library in `memes/`. Tenor's API was shut down in June 2026, and Gi
 
 - Everything runs locally. No accounts, no per-minute credits.
 - Captions are burned with libass from generated ASS, so they survive cuts and match edited time.
-- `render` uses loudnorm to hit -14 LUFS for YouTube; preview skips it for speed.
+- `render` uses loudnorm to hit -14 LUFS for YouTube; previews are normalised too, so they match the final.
 - The outro appender is reused from the CWM pipeline (`add-outro.ps1`), override with `ADD_OUTRO_PS1`.
 - `node tests/smoke.mjs` builds a synthetic project and checks render, captions, QC and review.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
+
+If CwmEditor saves you time, a star helps other people find it.
