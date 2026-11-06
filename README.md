@@ -4,12 +4,26 @@ A local video editor you drive with an agent. The timeline is JSON, ffmpeg does 
 
 Built for raw recordings: screen captures and talking head footage where the work is cutting filler, tightening dead air, dropping B-roll over the boring parts, and putting memes where the joke lands.
 
+![CwmEditor demo](docs/demo.gif)
+
+<img src="docs/gags.png" alt="On-screen gags: keycaps, stamps, checklists and chat threads" width="100%">
+
+## Requirements
+
+- Node 20 or newer
+- ffmpeg and ffprobe with libass. NVENC is used automatically when available.
+- Python 3.10+ with Pillow and librosa. `faster-whisper` is optional; without it, transcription falls back to `openai-whisper`.
+
+## Install
+
+```bash
+git clone https://github.com/Theolin-Nadasen/cwm-editor.git
+cd cwm-editor
+python -m pip install pillow librosa faster-whisper
+node cwmeditor.mjs doctor
 ```
-project.json  <- the whole edit
-media/        <- master recording
-work/         <- intermediate renders
-out/          <- previews, finals, review.html
-```
+
+There are no npm dependencies. `doctor` reports ffmpeg filters, Python packages, stickers, sounds and beds, so you know what is missing before you start.
 
 ## Quick start
 
@@ -22,7 +36,7 @@ node cwmeditor.mjs cut projects/ep01 --from 12.3 --to 14.8 --label "false start"
 node cwmeditor.mjs broll projects/ep01 --from 40 --to 52 --src "broll/code.mp4"
 node cwmeditor.mjs meme projects/ep01 --at 75.2 --src "memes/shocked.png" --dur 1.2 --scale 0.35
 node cwmeditor.mjs text projects/ep01 --at 80 --text "this is the whole trick"
-node cwmeditor.mjs music projects/ep01 --src "beds/neon-loop.mp3" --gain -20
+node cwmeditor.mjs music projects/ep01 --src "beds/neon-loop.mp3" --gain -10
 node cwmeditor.mjs preview projects/ep01
 node cwmeditor.mjs render projects/ep01 --outro
 node cwmeditor.mjs qc projects/ep01
@@ -38,6 +52,21 @@ node cwmeditor.mjs init projects/ep01-short --source "D:/recordings/ep01.mp4" --
 Two minutes renders in about 10 seconds as a preview and 19 seconds as a final, which is the right size for iterating.
 
 Open `projects/ep01/out/review.html` to see the contact sheet, transcript, cuts and overlays on one page.
+
+## Project layout
+
+```
+project.json  <- the whole edit
+media/        <- master recording
+work/         <- intermediate renders
+out/          <- previews, finals, review.html
+```
+
+## Screenshots
+
+Five caption themes, switchable per project:
+
+<img src="docs/themes.png" alt="Five caption themes: neon, clean, punch, terminal, classic" width="100%">
 
 ## The time model (important)
 
