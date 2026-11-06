@@ -1,0 +1,20 @@
+{
+  "ding": {
+    "file": "sfx/ding.wav"
+  },
+  "pop": {
+    "file": "sfx/pop.wav"
+  },
+  "error": {
+    "file": "sfx/error.wav"
+  },
+  "click": {
+    "file": "sfx/click.wav"
+  },
+  "boom": {
+    "file": "sfx/boom.wav"
+  },
+  "whoosh": {
+    "file": "sfx/whoosh.wav"
+  }
+}

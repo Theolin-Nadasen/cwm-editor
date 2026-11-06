@@ -1,0 +1,12 @@
+projects/
+tests/tmp/
+node_modules/
+work/
+out/
+*.mp4
+*.wav
+*.m4a
+*.log
+!beds/*.wav
+!sfx/*.wav
+!beds/*.mp3

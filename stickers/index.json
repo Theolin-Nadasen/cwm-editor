@@ -1,0 +1,158 @@
+{
+  "skull": {
+    "file": "stickers/skull.png",
+    "emoji": "skull"
+  },
+  "melting": {
+    "file": "stickers/melting.png",
+    "emoji": "melting_face"
+  },
+  "exploding-head": {
+    "file": "stickers/exploding-head.png",
+    "emoji": "exploding_head"
+  },
+  "clown": {
+    "file": "stickers/clown.png",
+    "emoji": "clown_face"
+  },
+  "fire": {
+    "file": "stickers/fire.png",
+    "emoji": "fire"
+  },
+  "eyes": {
+    "file": "stickers/eyes.png",
+    "emoji": "eyes"
+  },
+  "monocle": {
+    "file": "stickers/monocle.png",
+    "emoji": "face_with_monocle"
+  },
+  "thinking": {
+    "file": "stickers/thinking.png",
+    "emoji": "thinking_face"
+  },
+  "sob": {
+    "file": "stickers/sob.png",
+    "emoji": "loudly_crying_face"
+  },
+  "joy": {
+    "file": "stickers/joy.png",
+    "emoji": "face_with_tears_of_joy"
+  },
+  "nerd": {
+    "file": "stickers/nerd.png",
+    "emoji": "nerd_face"
+  },
+  "robot": {
+    "file": "stickers/robot.png",
+    "emoji": "robot"
+  },
+  "check": {
+    "file": "stickers/check.png",
+    "emoji": "check_mark_button"
+  },
+  "cross": {
+    "file": "stickers/cross.png",
+    "emoji": "cross_mark"
+  },
+  "warning": {
+    "file": "stickers/warning.png",
+    "emoji": "warning"
+  },
+  "sparkles": {
+    "file": "stickers/sparkles.png",
+    "emoji": "sparkles"
+  },
+  "brain": {
+    "file": "stickers/brain.png",
+    "emoji": "brain"
+  },
+  "money": {
+    "file": "stickers/money.png",
+    "emoji": "money_bag"
+  },
+  "bug": {
+    "file": "stickers/bug.png",
+    "emoji": "bug"
+  },
+  "hammer": {
+    "file": "stickers/hammer.png",
+    "emoji": "hammer"
+  },
+  "wrench": {
+    "file": "stickers/wrench.png",
+    "emoji": "wrench"
+  },
+  "hourglass": {
+    "file": "stickers/hourglass.png",
+    "emoji": "hourglass_not_done"
+  },
+  "crystal": {
+    "file": "stickers/crystal.png",
+    "emoji": "crystal_ball"
+  },
+  "bullseye": {
+    "file": "stickers/bullseye.png",
+    "emoji": "bullseye"
+  },
+  "hundred": {
+    "file": "stickers/hundred.png",
+    "emoji": "hundred_points"
+  },
+  "grimace": {
+    "file": "stickers/grimace.png",
+    "emoji": "grimacing_face"
+  },
+  "sweat": {
+    "file": "stickers/sweat.png",
+    "emoji": "downcast_face_with_sweat"
+  },
+  "alien": {
+    "file": "stickers/alien.png",
+    "emoji": "alien"
+  },
+  "ghost": {
+    "file": "stickers/ghost.png",
+    "emoji": "ghost"
+  },
+  "party": {
+    "file": "stickers/party.png",
+    "emoji": "party_popper"
+  },
+  "rocket": {
+    "file": "stickers/rocket.png",
+    "emoji": "rocket"
+  },
+  "lock": {
+    "file": "stickers/lock.png",
+    "emoji": "locked"
+  },
+  "key": {
+    "file": "stickers/key.png",
+    "emoji": "key"
+  },
+  "gear": {
+    "file": "stickers/gear.png",
+    "emoji": "gear"
+  },
+  "bomb": {
+    "file": "stickers/bomb.png",
+    "emoji": "bomb"
+  },
+  "coffee": {
+    "file": "stickers/coffee.png",
+    "emoji": "hot_beverage"
+  },
+  "yikes": {
+    "file": "stickers/yikes.png",
+    "emoji": "face_screaming_in_fear"
+  },
+  "neutral": {
+    "file": "stickers/neutral.png",
+    "emoji": "neutral_face"
+  },
+  "nope": {
+    "file": "stickers/nope.png",
+    "emoji": "face_with_symbols_on_mouth"
+  }
+}

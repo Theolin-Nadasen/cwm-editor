@@ -1,0 +1,17 @@
+{
+  "name": "cwmeditor",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local, agent-drivable video editor. Timeline as data, ffmpeg as the renderer.",
+  "bin": {
+    "cwmeditor": "./cwmeditor.mjs"
+  },
+  "scripts": {
+    "smoke": "node tests/smoke.mjs",
+    "mcp": "node mcp/server.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
