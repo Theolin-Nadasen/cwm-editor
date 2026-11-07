@@ -3,8 +3,26 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { clamp } from "./util.mjs";
 
-export const DEFAULT_FORMAT = { w: 1920, h: 1080, fps: 30 };
+export const DEFAULT_FORMAT = { w: 1920, h: 1080, fps: 30, fit: "cover" };
 export const HISTORY_LIMIT = 25;
+
+export const FORMAT_PRESETS = {
+  landscape: { w: 1920, h: 1080, fit: "cover" },
+  vertical: { w: 1080, h: 1920, fit: "blur" },
+  tiktok: { w: 1080, h: 1920, fit: "blur" },
+  shorts: { w: 1080, h: 1920, fit: "blur" },
+  reels: { w: 1080, h: 1920, fit: "blur" },
+  square: { w: 1080, h: 1080, fit: "blur" },
+};
+
+export function formatPreset(name) {
+  if (name == null || name === "") return null;
+  const preset = FORMAT_PRESETS[String(name).toLowerCase()];
+  if (!preset) {
+    throw new Error(`Unknown format preset: ${name}. Use ${Object.keys(FORMAT_PRESETS).join(", ")}`);
+  }
+  return { ...preset, name: String(name).toLowerCase() };
+}
 
 const REPO_ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const ASSET_DIRS = new Set(["stickers", "sfx", "beds", "memes"]);
@@ -166,6 +184,7 @@ export function projectSummary(project) {
   return {
     name: project.name,
     format: `${project.format.w}x${project.format.h} @ ${project.format.fps}fps`,
+    fit: project.format.fit ?? "cover",
     masterDuration: project.master.duration,
     editedDuration: editedDuration(project),
     cuts: project.cuts.length,

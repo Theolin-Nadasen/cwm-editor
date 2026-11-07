@@ -9,6 +9,7 @@ import path from "node:path";
 import readline from "node:readline";
 import {
   editedDuration,
+  formatPreset,
   load,
   projectSummary,
   resolveMember,
@@ -46,6 +47,34 @@ const tools = [
         overlays: ops.overlaySummary(p),
         history: (p.history ?? []).length,
       };
+    },
+  },
+  {
+    name: "cwmeditor_format",
+    description: "Set output size and framing. Presets: landscape, vertical, tiktok, shorts, reels, square. fit: cover crops to fill, blur pads with a blurred background, pad adds black bars.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        dir: { type: "string" },
+        preset: { type: "string", enum: ["landscape", "vertical", "tiktok", "shorts", "reels", "square"] },
+        w: { type: "number" },
+        h: { type: "number" },
+        fps: { type: "number" },
+        fit: { type: "string", enum: ["cover", "blur", "pad"] },
+      },
+      required: ["dir"],
+    },
+    run: ({ dir, preset, w, h, fps, fit }) => {
+      const p = open(dir);
+      const base = formatPreset(preset);
+      const result = ops.setFormat(p, {
+        w: w ?? base?.w,
+        h: h ?? base?.h,
+        fps,
+        fit: fit ?? base?.fit,
+      });
+      save(dir, p);
+      return result;
     },
   },
   {

@@ -6,6 +6,7 @@ import {
   projectPaths,
   projectSummary,
   DEFAULT_FORMAT,
+  formatPreset,
   initProject,
   load,
   resolveMember,
@@ -59,8 +60,10 @@ function print(value) {
 
 const HELP = `cwmeditor - timeline as data, ffmpeg as the renderer
 
-  cwmeditor init <dir> --source <file> [--name x] [--w 1920 --h 1080 --fps 30] [--reference]
+  cwmeditor init <dir> --source <file> [--name x] [--preset landscape|vertical|tiktok|shorts|reels|square]
+                 [--w 1920 --h 1080 --fps 30] [--fit cover|blur|pad] [--reference]
                  [--excerpt 0:00-2:00]   (cuts a fast copy for quick tests)
+  cwmeditor format <dir> [--preset vertical] [--w 1080 --h 1920 --fps 30] [--fit blur]
   cwmeditor status <dir>
   cwmeditor themes
   cwmeditor theme <dir> --name neon|clean|punch|terminal|classic
@@ -93,7 +96,7 @@ const HELP = `cwmeditor - timeline as data, ffmpeg as the renderer
   cwmeditor gag-scan <dir> [--apply] [--ids 1,3] [--min-gap 18] [--max-per-min 3]
   cwmeditor text <dir> --at 4.2 --text "hello" [--dur 2] [--pos bottom]
   cwmeditor overlay-remove <dir> --id o1
-  cwmeditor music <dir> --src bed.mp3 [--gain -20] [--duck soft|hard|off] [--fit loop|trim] [--fade 0.6] | --off
+  cwmeditor music <dir> --src bed.mp3 [--gain -10] [--duck soft|hard|off] [--fit loop|trim] [--fade 0.6] | --off
   cwmeditor voice <dir> --on|--off [--strength light|normal|strong]
   cwmeditor loudness <dir> --platform youtube|tiktok|instagram|podcast|cinema
   cwmeditor beats <dir> [--src bed.mp3] [--snap] [--window 0.3]
@@ -189,6 +192,7 @@ async function main() {
   if (command === "init") {
     const source = flags.source;
     if (!source) throw new Error("init needs --source <file>");
+    const preset = formatPreset(flags.preset);
     const absolute = path.resolve(source);
     if (!fs.existsSync(absolute)) throw new Error(`Source not found: ${absolute}`);
     const info = await probe(absolute);
@@ -221,9 +225,10 @@ async function main() {
       name: flags.name ?? path.basename(path.resolve(dir)),
       source: rel,
       format: {
-        w: Number(flags.w ?? DEFAULT_FORMAT.w),
-        h: Number(flags.h ?? DEFAULT_FORMAT.h),
+        w: Number(flags.w ?? preset?.w ?? DEFAULT_FORMAT.w),
+        h: Number(flags.h ?? preset?.h ?? DEFAULT_FORMAT.h),
         fps: Number(flags.fps ?? DEFAULT_FORMAT.fps),
+        fit: flags.fit ?? preset?.fit ?? DEFAULT_FORMAT.fit,
       },
       duration: info.duration,
       hasVideo: info.hasVideo,
@@ -250,6 +255,23 @@ async function main() {
         history: (project.history ?? []).length,
       });
       break;
+
+    case "format": {
+      if (!flags.preset && flags.w === undefined && flags.h === undefined && flags.fps === undefined && flags.fit === undefined) {
+        print({ ok: true, ...project.format });
+        break;
+      }
+      const preset = formatPreset(flags.preset);
+      const result = ops.setFormat(project, {
+        w: flags.w ?? preset?.w,
+        h: flags.h ?? preset?.h,
+        fps: flags.fps,
+        fit: flags.fit ?? preset?.fit,
+      });
+      save(dir, project);
+      print({ ok: true, ...result });
+      break;
+    }
 
     case "theme": {
       const name = flags.name ?? positional[2];

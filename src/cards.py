@@ -85,9 +85,9 @@ def gradient_card(width, height, radius, top, bottom, border, border_width=2):
 def draw_toast(args):
     width = args.width
     pad = max(14, width // 30)
-    label_face = font(max(11, width // 44), bold=True)
-    text_face = font(max(20, width // 20), bold=True)
-    meta_face = font(max(10, width // 52), bold=False)
+    label_face = font(max(11, width // 28), bold=True)
+    text_face = font(max(20, width // 15), bold=True)
+    meta_face = font(max(10, width // 34), bold=False)
     accent = hex_rgb(args.accent)
     border = hex_rgb(args.border)
 
@@ -142,9 +142,9 @@ def draw_toast(args):
 
 def bubble_image(width, text, name, icon_path, accent_hex, border_hex, radius=None):
     pad = max(12, width // 24)
-    name_face = font(max(10, width // 38), bold=True)
-    text_face = font(max(18, width // 17), bold=False)
-    meta_face = font(max(9, width // 46), bold=False)
+    name_face = font(max(10, width // 24), bold=True)
+    text_face = font(max(18, width // 12), bold=False)
+    meta_face = font(max(9, width // 30), bold=False)
     accent = hex_rgb(accent_hex)
     border = hex_rgb(border_hex)
 
@@ -329,7 +329,7 @@ def draw_command(args):
     label = spec.get("label", "terminal")
     pad = max(14, width // 26)
     dot_face = mono_font(max(12, width // 40))
-    cmd_face = mono_font(max(16, width // 24))
+    cmd_face = mono_font(max(16, width // 20))
     accent = hex_rgb(spec.get("accent", "#59F7A3"))
 
     probe = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
@@ -355,16 +355,20 @@ def draw_stamp(args):
     text = spec.get("text", "BROKEN").upper()
     color = hex_rgb(spec.get("color", "#FF2D95"))
     angle = float(spec.get("angle", -8))
-    size = int(spec.get("size", 110))
+    size = int(spec.get("size", max(28, round(args.width * 0.18))))
     face = heavy_font(size)
 
     probe = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
-    width = int(probe.textlength(text, font=face)) + 60
-    height = size + 46
+    pad_x = max(14, int(size * 0.55))
+    pad_y = max(10, int(size * 0.42))
+    width = int(probe.textlength(text, font=face)) + pad_x * 2
+    height = size + pad_y * 2
     layer = Image.new("RGBA", (width, height), (0, 0, 0, 0))
     draw = ImageDraw.Draw(layer)
-    draw.rectangle([4, 4, width - 5, height - 5], outline=color, width=6)
-    draw.rectangle([16, 16, width - 17, height - 17], outline=color, width=2)
+    outer = max(2, size // 18)
+    inner = max(1, size // 55)
+    draw.rectangle([outer, outer, width - outer - 1, height - outer - 1], outline=color, width=outer)
+    draw.rectangle([outer * 3, outer * 3, width - outer * 3 - 1, height - outer * 3 - 1], outline=color, width=inner)
     draw.text((width // 2, height // 2), text, font=face, fill=color, anchor="mm")
 
     rotated = layer.rotate(angle, resample=Image.BICUBIC, expand=True)
@@ -448,9 +452,9 @@ def draw_notification(args):
     body = spec.get("body", "You are running out of space.")
     icon_path = spec.get("icon")
     pad = max(14, width // 26)
-    app_face = font(max(10, width // 40), bold=False)
-    title_face = font(max(16, width // 24), bold=True)
-    body_face = font(max(12, width // 32), bold=False)
+    app_face = font(max(10, width // 30), bold=False)
+    title_face = font(max(16, width // 18), bold=True)
+    body_face = font(max(12, width // 24), bold=False)
 
     icon_size = int(title_face.size * 2)
     icon = load_icon(icon_path, icon_size)
@@ -488,8 +492,8 @@ def draw_checklist(args):
     title = spec.get("title", "SETUP").upper()
     items = spec.get("items", [])
     pad = max(14, width // 26)
-    title_face = font(max(11, width // 34), bold=True)
-    item_face = font(max(13, width // 26), bold=True)
+    title_face = font(max(11, width // 24), bold=True)
+    item_face = font(max(13, width // 18), bold=True)
     accent = hex_rgb(spec.get("accent", "#35E0FF"))
 
     line_h = int(item_face.size * 1.7)
@@ -534,8 +538,8 @@ def draw_progress(args):
     frames = int(spec.get("frames", 5))
     accent = hex_rgb(spec.get("accent", "#35E0FF"))
     pad = max(12, width // 26)
-    label_face = font(max(12, width // 28), bold=True)
-    pct_face = font(max(12, width // 28), bold=True)
+    label_face = font(max(12, width // 22), bold=True)
+    pct_face = font(max(12, width // 22), bold=True)
     bar_h = max(12, width // 26)
     height = pad * 2 + int(label_face.size * 1.6) + bar_h
 

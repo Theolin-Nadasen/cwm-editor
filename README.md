@@ -62,6 +62,29 @@ work/         <- intermediate renders
 out/          <- previews, finals, review.html
 ```
 
+## Vertical and short-form
+
+Short-form is a project format, not a separate pipeline. Set it at init:
+
+```bash
+node cwmeditor.mjs init projects/short --source "D:/recordings/ep01.mp4" --preset tiktok
+```
+
+Presets: `landscape` (1920x1080), `vertical`, `tiktok`, `shorts`, `reels` (all 1080x1920), and `square` (1080x1080). Change an existing project with:
+
+```bash
+node cwmeditor.mjs format projects/short --preset tiktok
+node cwmeditor.mjs format projects/short --fit pad
+```
+
+`fit` controls what happens when the source and output aspect ratios differ:
+
+- `cover` crops to fill. Good for footage that already suits the frame.
+- `blur` fits the whole source and fills the rest with a blurred copy. Vertical projects default to this, so a 16:9 screen recording keeps the entire screen.
+- `pad` adds black bars.
+
+Captions switch to 20 character lines, a smaller portrait font and a 15% bottom margin. Gags scale up on portrait so text stays readable on a phone, and they sit in a safe band clear of the top tabs and the bottom caption and username area. A source that is already vertical fills the frame with no padding. Card PNGs are generated at full project resolution and scaled down for previews, so the preview matches the final layout.
+
 ## Screenshots
 
 Five caption themes, switchable per project:
@@ -82,6 +105,7 @@ Cuts, B-roll and overlays are stored in master time internally so adding a cut l
 | Command | What it does |
 |---|---|
 | `init` | Create a project, copy the source into `media/` |
+| `format` | Set output size, preset, fps and fit mode |
 | `transcribe` | Word-level transcript via faster-whisper, falling back to openai-whisper |
 | `use-transcript` | Point the project at an existing transcript JSON |
 | `cut` | Remove a time range from the master (filler, mistakes, dead air) |
@@ -131,7 +155,7 @@ All times accept `12.5`, `1:02.5` or `0:01:02.50`.
 
 ## Agent surface (MCP)
 
-`mcp/server.mjs` exposes the same operations as MCP tools: `cwmeditor_status`, `cwmeditor_cut`, `cwmeditor_cut_preview`, `cwmeditor_broll`, `cwmeditor_meme`, `cwmeditor_text`, `cwmeditor_music`, `cwmeditor_captions`, `cwmeditor_preview`, `cwmeditor_render`, `cwmeditor_qc`, `cwmeditor_review`, `cwmeditor_undo`.
+`mcp/server.mjs` exposes the same operations as MCP tools: `cwmeditor_status`, `cwmeditor_format`, `cwmeditor_cut`, `cwmeditor_cut_preview`, `cwmeditor_broll`, `cwmeditor_meme`, `cwmeditor_text`, `cwmeditor_music`, `cwmeditor_captions`, `cwmeditor_preview`, `cwmeditor_render`, `cwmeditor_qc`, `cwmeditor_review`, `cwmeditor_undo`.
 
 Add to `opencode.json`:
 

@@ -349,6 +349,34 @@ export function removeSfx(project, id) {
   return { id };
 }
 
+export function setFormat(project, { w, h, fps, fit }) {
+  const next = { ...project.format };
+  if (w != null) {
+    const value = Math.round(Number(w));
+    if (!Number.isFinite(value) || value < 16) throw new Error(`Bad width: ${w}`);
+    next.w = value;
+  }
+  if (h != null) {
+    const value = Math.round(Number(h));
+    if (!Number.isFinite(value) || value < 16) throw new Error(`Bad height: ${h}`);
+    next.h = value;
+  }
+  if (fps != null) {
+    const value = Number(fps);
+    if (!Number.isFinite(value) || value <= 0 || value > 120) throw new Error(`Bad fps: ${fps}`);
+    next.fps = value;
+  }
+  if (fit != null) {
+    if (!["cover", "blur", "pad"].includes(fit)) {
+      throw new Error(`Unknown fit "${fit}". Use cover, blur or pad.`);
+    }
+    next.fit = fit;
+  }
+  snapshot(project);
+  project.format = next;
+  return { ...next };
+}
+
 export function setLoudness(project, { platform, lufs, truePeak }) {
   const preset = LOUDNESS_PRESETS[platform];
   if (!preset && lufs === undefined) {

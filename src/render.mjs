@@ -39,23 +39,74 @@ function even(n) {
   return Math.max(2, Math.round(n / 2) * 2);
 }
 
-function overlayPosition(pos) {
+function overlayPosition(pos, size) {
+  const { top, bottom, side } = safeBands(size);
   switch (pos) {
     case "top":
-      return { x: "(W-w)/2", y: "H*0.08" };
+      return { x: "(W-w)/2", y: `H*${top}` };
     case "top-left":
-      return { x: "W*0.06", y: "H*0.08" };
+      return { x: `W*${side}`, y: `H*${top}` };
     case "top-right":
-      return { x: "W-w-W*0.06", y: "H*0.08" };
+      return { x: `W-w-W*${side}`, y: `H*${top}` };
     case "bottom":
-      return { x: "(W-w)/2", y: "H-h-H*0.12" };
+      return { x: "(W-w)/2", y: `H-h-H*${bottom}` };
     case "bottom-left":
-      return { x: "W*0.06", y: "H-h-H*0.12" };
+      return { x: `W*${side}`, y: `H-h-H*${bottom}` };
     case "bottom-right":
-      return { x: "W-w-W*0.06", y: "H-h-H*0.12" };
+      return { x: `W-w-W*${side}`, y: `H-h-H*${bottom}` };
     default:
       return { x: "(W-w)/2", y: "(H-h)/2" };
   }
+}
+
+// Keeps portable clips clear of the platform UI. Portrait gets a taller bottom
+// band for captions, username and the action rail, plus a lower top band.
+function safeBands(size) {
+  return size.h > size.w
+    ? { top: 0.11, bottom: 0.22, side: 0.06 }
+    : { top: 0.08, bottom: 0.12, side: 0.06 };
+}
+
+function fitChain(input, output, size, fit, tag) {
+  const { w, h } = size;
+  if (fit === "pad") {
+    return (
+      `[${input}]scale=${w}:${h}:force_original_aspect_ratio=decrease,` +
+      `pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1[${output}]`
+    );
+  }
+  if (fit === "blur") {
+    const sigma = Math.max(12, Math.round(h / 27));
+    return (
+      `[${input}]split=2[${tag}a][${tag}b];` +
+      `[${tag}a]scale=${w}:${h}:force_original_aspect_ratio=increase,crop=${w}:${h},` +
+      `gblur=sigma=${sigma},eq=brightness=-0.12:saturation=0.7[${tag}c];` +
+      `[${tag}b]scale=${w}:${h}:force_original_aspect_ratio=decrease,` +
+      `drawbox=x=0:y=0:w=iw:h=ih:color=black@0.35:t=4[${tag}d];` +
+      `[${tag}c][${tag}d]overlay=(W-w)/2:(H-h)/2,setsar=1[${output}]`
+    );
+  }
+  return (
+    `[${input}]scale=${w}:${h}:force_original_aspect_ratio=increase,` +
+    `crop=${w}:${h},setsar=1[${output}]`
+  );
+}
+
+// Blur padding only makes sense when the source aspect differs from the output.
+// A native vertical clip should fill the frame without a second blurred pass.
+function effectiveFit(project, info, size) {
+  const fit = project.format.fit ?? "cover";
+  if (fit !== "blur" || !info?.width || !info?.height) return fit;
+  const source = info.width / info.height;
+  const output = size.w / size.h;
+  return Math.abs(source - output) < 0.01 ? "cover" : fit;
+}
+
+// Portrait frames have far more empty width than a 16:9 frame, so cards need
+// to occupy a larger share of it to stay readable on a phone.
+function cardWidth(size, fraction, min = 64) {
+  const scale = size.h > size.w ? 1.25 : 1;
+  return Math.max(min, Math.round((size.w * fraction * scale) / 2) * 2);
 }
 
 async function buildBaseVideo(project, masterPath, info, outFile, size, fps, vargs) {
@@ -74,21 +125,22 @@ async function buildBaseVideo(project, masterPath, info, outFile, size, fps, var
     return;
   }
 
-  const parts = ranges.map(
-    (r, i) =>
-      `[0:v]trim=start=${r.start}:end=${r.end},setpts=PTS-STARTPTS,` +
-      `scale=${size.w}:${size.h}:force_original_aspect_ratio=increase,` +
-      `crop=${size.w}:${size.h},setsar=1,fps=${fps}[v${i}]`,
-  );
+  const fit = effectiveFit(project, info, size);
+  const filters = [];
+  ranges.forEach((r, i) => {
+    filters.push(
+      `[0:v]trim=start=${r.start}:end=${r.end},setpts=PTS-STARTPTS,fps=${fps}[t${i}]`,
+    );
+    filters.push(fitChain(`t${i}`, `v${i}`, size, fit, `bf${i}`));
+  });
   const labels = ranges.map((_, i) => `[v${i}]`).join("");
-  const graph =
-    ranges.length === 1
-      ? `${parts[0]}`
-      : `${parts.join(";")};${labels}concat=n=${ranges.length}:v=1:a=0[vout]`;
+  if (ranges.length > 1) {
+    filters.push(`${labels}concat=n=${ranges.length}:v=1:a=0[vout]`);
+  }
 
   await ffmpeg([
     "-i", fwd(masterPath),
-    "-filter_complex", graph,
+    "-filter_complex", filters.join(";"),
     "-map", ranges.length === 1 ? "[v0]" : "[vout]",
     "-an",
     ...vargs,
@@ -185,10 +237,20 @@ async function spliceVideo(project, dir, baseFile, outFile, size, fps, vargs) {
     const input = IMAGE_RE.test(src)
       ? ["-loop", "1", "-t", String(round(duration, 3)), "-i", fwd(src)]
       : ["-ss", String(round(slot.srcIn ?? 0, 3)), "-t", String(round(duration, 3)), "-i", fwd(src)];
+    let fit = project.format.fit ?? "cover";
+    if (!IMAGE_RE.test(src)) {
+      try {
+        fit = effectiveFit(project, await probe(src), size);
+      } catch {
+        // Fall back to the project fit if the b-roll cannot be probed.
+      }
+    }
+    const graph = fitChain("0:v", "bout", size, fit, "br");
     await ffmpeg([
       ...input,
       "-an",
-      "-vf", `scale=${size.w}:${size.h}:force_original_aspect_ratio=increase,crop=${size.w}:${size.h},setsar=1,fps=${fps}`,
+      "-filter_complex", graph,
+      "-map", "[bout]",
       ...vargs,
       "-r", String(fps),
       fwd(file),
@@ -215,8 +277,8 @@ async function spliceVideo(project, dir, baseFile, outFile, size, fps, vargs) {
 async function makeCard(dir, overlay, size) {
   const out = path.join(projectPaths(dir).work, "cards", `${overlay.id}.png`);
   fs.mkdirSync(path.dirname(out), { recursive: true });
-  const fraction = overlay.kind === "toast" ? 0.52 : 0.36;
-  const width = Math.max(240, Math.round((size.w * fraction) / 2) * 2);
+  const fraction = overlay.kind === "toast" ? 0.52 : 0.4;
+  const width = cardWidth(size, fraction);
   const args = [
     CARDS_PY,
     "--kind", overlay.kind,
@@ -261,6 +323,7 @@ async function applyZooms(project, dir, videoFile, outFile, size, fps, vargs) {
 
   const renderPart = async (start, end, zoom) => {
     const file = path.join(work, `zoom-${index++}.mp4`);
+    const filters = [];
     const args = [
       "-ss", String(round(start, 3)),
       "-t", String(round(end - start, 3)),
@@ -270,14 +333,14 @@ async function applyZooms(project, dir, videoFile, outFile, size, fps, vargs) {
     if (zoom) {
       const f = zoom.factor;
       const [cx, cy] = zoom.center ?? [0.5, 0.5];
-      args.push(
-        "-vf",
-        `crop=iw/${f}:ih/${f}:(iw-iw/${f})*${cx}:(ih-ih/${f})*${cy},` +
-          `scale=${size.w}:${size.h}:force_original_aspect_ratio=increase,crop=${size.w}:${size.h},setsar=1,fps=${fps}`,
+      filters.push(
+        `[0:v]crop=iw/${f}:ih/${f}:(iw-iw/${f})*${cx}:(ih-ih/${f})*${cy},fps=${fps}[zin]`,
       );
     } else {
-      args.push("-vf", `scale=${size.w}:${size.h},setsar=1,fps=${fps}`);
+      filters.push(`[0:v]fps=${fps}[zin]`);
     }
+    filters.push(fitChain("zin", "zout", size, "cover", `zf${index}`));
+    args.push("-filter_complex", filters.join(";"), "-map", "[zout]");
     args.push(...vargs, "-r", String(fps), fwd(file));
     await ffmpeg(args);
     parts.push(file);
@@ -300,7 +363,7 @@ async function applyZooms(project, dir, videoFile, outFile, size, fps, vargs) {
 }
 
 async function makeChat(dir, overlay, size) {
-  const width = Math.max(240, Math.round((size.w * 0.27) / 2) * 2);
+  const width = cardWidth(size, 0.3);
   const base = path.join(projectPaths(dir).work, "cards", `${overlay.id}`);
   const folder = path.dirname(base);
   fs.mkdirSync(folder, { recursive: true });
@@ -349,7 +412,7 @@ async function makeSpecCard(dir, overlay, size) {
     overlay.kind === "stat" && overlay.pos && overlay.pos !== "center"
       ? 0.22
       : SPEC_FRACTIONS[overlay.kind];
-  const width = Math.max(200, Math.round((size.w * fraction) / 2) * 2);
+  const width = cardWidth(size, fraction);
   const spec = { ...overlay.spec };
   if (spec.icon) {
     try {
@@ -363,7 +426,7 @@ async function makeSpecCard(dir, overlay, size) {
 }
 
 async function makeChecklistStages(dir, project, item, size, start, end) {
-  const width = Math.max(200, Math.round((size.w * SPEC_FRACTIONS.checklist) / 2) * 2);
+  const width = cardWidth(size, SPEC_FRACTIONS.checklist);
   const baseItems = item.spec.items ?? [];
   const ticks = (item.spec.ticks ?? [])
     .map((tick) => ({
@@ -409,8 +472,12 @@ async function scalePng(src, factor, out) {
   return out;
 }
 
-async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs) {
+async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs, fullSize = size) {
   const total = editedDuration(project);
+  const bands = safeBands(size);
+  const portrait = size.h > size.w;
+  const cardSize = fullSize;
+  const cardScale = size.w / cardSize.w;
   const items = project.overlays
     .filter((o) => IMAGE_OVERLAYS.has(o.kind))
     .map((o) => ({ ...o, editedAt: masterToEdited(project, o.at) }))
@@ -440,15 +507,18 @@ async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs)
     const start = round(item.editedAt, 3);
 
     if (item.kind === "chat") {
-      const { files, canvas } = await makeChat(dir, item, size);
-      const x = `W-${canvas.w}-W*0.02`;
-      const y = `H-${canvas.h}-H*0.22`;
+      const { files, canvas } = await makeChat(dir, item, cardSize);
+      const cw = Math.max(1, Math.round(canvas.w * cardScale));
+      const ch = Math.max(1, Math.round(canvas.h * cardScale));
+      const x = `W-${cw}-W*${bands.side}`;
+      const y = portrait ? "H*0.09" : `H-${ch}-H*${bands.bottom}`;
       for (let j = 0; j < files.length; j += 1) {
         const idx = addInput(files[j], end);
         const at = round(start + j * 0.28, 3);
         const label = `c${i}_${j}`;
         filters.push(
-          `[${idx}:v]setpts=PTS-STARTPTS,format=rgba,fade=t=in:st=${at}:d=0.12:alpha=1[${label}]`,
+          `[${idx}:v]setpts=PTS-STARTPTS,format=rgba,scale=iw*${cardScale}:-1,` +
+            `fade=t=in:st=${at}:d=0.12:alpha=1[${label}]`,
         );
         const next = `v${i}_${j}`;
         filters.push(
@@ -464,9 +534,9 @@ async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs)
       let stages = [];
 
       if (item.kind === "checklist" && (item.spec.ticks ?? []).length) {
-        stages = await makeChecklistStages(dir, project, item, size, start, end);
+        stages = await makeChecklistStages(dir, project, item, cardSize, start, end);
       } else {
-        const { files, base } = await makeSpecCard(dir, item, size);
+        const { files, base } = await makeSpecCard(dir, item, cardSize);
         const pop = ["keycap", "command", "stat", "checklist"].includes(item.kind);
 
         if (files.length === 1 && (pop || item.kind === "stamp")) {
@@ -488,15 +558,17 @@ async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs)
         const stage = stages[j];
         const idx = addInput(stage.file, stage.until);
         const label = `s${i}_${j}`;
-        filters.push(`[${idx}:v]setpts=PTS-STARTPTS,format=rgba[${label}]`);
+        filters.push(
+          `[${idx}:v]setpts=PTS-STARTPTS,format=rgba,scale=iw*${cardScale}:-1[${label}]`,
+        );
 
         let pos;
         switch (item.kind) {
           case "keycap":
-            pos = { x: "(W-w)/2", y: "H-h-H*0.1" };
+            pos = { x: "(W-w)/2", y: `H-h-H*${bands.bottom}` };
             break;
           case "command":
-            pos = { x: "W*0.05", y: "H-h-H*0.12" };
+            pos = { x: `W*${bands.side}`, y: `H-h-H*${bands.bottom}` };
             break;
           case "stamp":
             pos = { x: "(W-w)/2", y: "(H-h)/2" };
@@ -504,31 +576,31 @@ async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs)
           case "stat": {
             const map = {
               center: { x: "(W-w)/2", y: "(H-h)/2" },
-              "bottom-left": { x: "W*0.05", y: "H-h-H*0.12" },
-              "bottom-right": { x: "W-w-W*0.05", y: "H-h-H*0.12" },
-              "top-left": { x: "W*0.05", y: "H*0.12" },
-              "top-right": { x: "W-w-W*0.05", y: "H*0.12" },
+              "bottom-left": { x: `W*${bands.side}`, y: `H-h-H*${bands.bottom}` },
+              "bottom-right": { x: `W-w-W*${bands.side}`, y: `H-h-H*${bands.bottom}` },
+              "top-left": { x: `W*${bands.side}`, y: `H*${bands.top}` },
+              "top-right": { x: `W-w-W*${bands.side}`, y: `H*${bands.top}` },
             };
             pos = map[item.pos] ?? map.center;
             break;
           }
           case "chapter":
             pos = {
-              x: `'if(lt(t,${stage.at}+0.25),-w+(W*0.05+w)*min(1,(t-${stage.at})/0.25),W*0.05)'`,
-              y: "H*0.3",
+              x: `'if(lt(t,${stage.at}+0.25),-w+(W*${bands.side}+w)*min(1,(t-${stage.at})/0.25),W*${bands.side})'`,
+              y: portrait ? "H*0.32" : "H*0.3",
             };
             break;
           case "notification":
             pos = {
-              x: `'if(lt(t,${stage.at}+0.3),W-(w+W*0.03)*min(1,(t-${stage.at})/0.3),W-w-W*0.03)'`,
-              y: "H*0.07",
+              x: `'if(lt(t,${stage.at}+0.3),W-(w+W*${bands.side})*min(1,(t-${stage.at})/0.3),W-w-W*${bands.side})'`,
+              y: `H*${bands.top}`,
             };
             break;
           case "checklist":
-            pos = { x: "W-w-W*0.03", y: "H*0.14" };
+            pos = { x: `W-w-W*${bands.side}`, y: `H*${portrait ? 0.16 : 0.14}` };
             break;
           case "progress":
-            pos = { x: "(W-w)/2", y: "H-h-H*0.14" };
+            pos = { x: "(W-w)/2", y: `H-h-H*${bands.bottom}` };
             break;
           default:
             pos = { x: "(W-w)/2", y: "(H-h)/2" };
@@ -546,7 +618,7 @@ async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs)
 
     let src;
     if (item.kind === "bubble" || item.kind === "toast") {
-      src = await makeCard(dir, item, size);
+      src = await makeCard(dir, item, cardSize);
     } else {
       src = resolveMember(dir, item.src);
     }
@@ -558,7 +630,7 @@ async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs)
       const width = Math.max(32, Math.round(size.w * item.scale));
       pre = `[${idx}:v]setpts=PTS-STARTPTS,format=rgba,scale=${width}:-1[${label}]`;
     } else if (item.kind === "bubble" || item.kind === "toast") {
-      pre = `[${idx}:v]setpts=PTS-STARTPTS,format=rgba,fade=t=in:st=0:d=0.12:alpha=1,fade=t=out:st=${round(end - 0.18, 3)}:d=0.18:alpha=1[${label}]`;
+      pre = `[${idx}:v]setpts=PTS-STARTPTS,format=rgba,scale=iw*${cardScale}:-1,fade=t=in:st=0:d=0.12:alpha=1,fade=t=out:st=${round(end - 0.18, 3)}:d=0.18:alpha=1[${label}]`;
     } else {
       pre = `[${idx}:v]setpts=PTS-STARTPTS,format=rgba,scale=iw*${item.scale}:-1,fade=t=in:st=${start}:d=0.12:alpha=1[${label}]`;
     }
@@ -568,14 +640,16 @@ async function applyOverlays(project, dir, videoFile, outFile, size, fps, vargs)
     let pos;
     if (item.kind === "toast") {
       const drop = 0.3;
-      const target = "H*0.055";
+      const target = `H*${bands.top}`;
       const p = `((t-${start})/${drop})`;
       const y = `if(lt(t,${start}),-h,if(lt(t,${start + drop}),-h+(${target}+h)*(1-pow(1-${p},3)),${target}))`;
       pos = { x: "(W-w)/2", y: `'${y}'` };
     } else if (item.kind === "bubble") {
-      pos = { x: "W-w-W*0.06", y: "H-h-H*0.26" };
+      pos = portrait
+        ? { x: `W-w-W*${bands.side}`, y: "H*0.24" }
+        : { x: `W-w-W*${bands.side}`, y: `H-h-H*0.26` };
     } else {
-      pos = overlayPosition(item.pos);
+      pos = overlayPosition(item.pos, size);
     }
 
     const next = `v${i}`;
@@ -788,27 +862,28 @@ async function renderFast({ project, dir, masterPath, info, outFile, size, fps, 
   const hasText = (project.overlays ?? []).some((o) => o.kind === "text");
 
   let assFile = null;
+  let assInfo = null;
   if (project.transcript || hasText) {
     let transcript = null;
     if (project.transcript) {
       const file = resolveMember(dir, project.transcript);
       if (fs.existsSync(file)) transcript = JSON.parse(fs.readFileSync(file, "utf8"));
     }
-    const { ass, words } = buildAss(project, transcript, size);
+    const { ass, words, lines, theme } = buildAss(project, transcript, size);
     if (words || hasText) {
       assFile = path.join(projectPaths(dir).work, "captions.ass");
       fs.mkdirSync(path.dirname(assFile), { recursive: true });
       fs.writeFileSync(assFile, ass);
+      assInfo = { lines, words, theme };
     }
   }
 
   const filters = [];
   ranges.forEach((r, i) => {
     filters.push(
-      `[0:v]trim=start=${r.start}:end=${r.end},setpts=PTS-STARTPTS,` +
-        `scale=${size.w}:${size.h}:force_original_aspect_ratio=increase,` +
-        `crop=${size.w}:${size.h},setsar=1,fps=${fps}[v${i}]`,
+      `[0:v]trim=start=${r.start}:end=${r.end},setpts=PTS-STARTPTS,fps=${fps}[t${i}]`,
     );
+    filters.push(fitChain(`t${i}`, `v${i}`, size, effectiveFit(project, info, size), `ff${i}`));
   });
   let vlabel = ranges.length === 1 ? "v0" : "vcat";
   if (ranges.length > 1) {
@@ -830,7 +905,7 @@ async function renderFast({ project, dir, masterPath, info, outFile, size, fps, 
     "-r", String(fps),
     fwd(outFile),
   ]);
-  return { fast: true, captions: Boolean(assFile) };
+  return { fast: true, captions: assInfo };
 }
 
 export async function renderProject(dir, { preview = false, outro = false } = {}) {
@@ -849,9 +924,10 @@ export async function renderProject(dir, { preview = false, outro = false } = {}
   const quality = preview ? "preview" : "final";
   const vargs = videoArgs(encoder, quality);
   const factor = preview ? 0.5 : 1;
+  const fullSize = { w: even(project.format.w), h: even(project.format.h) };
   const size = {
-    w: even(project.format.w * factor),
-    h: even(project.format.h * factor),
+    w: even(fullSize.w * factor),
+    h: even(fullSize.h * factor),
   };
   const fps = project.format.fps;
   const baseName = preview ? `${project.name}-preview` : project.name;
@@ -876,7 +952,8 @@ export async function renderProject(dir, { preview = false, outro = false } = {}
   if (fastPath) {
     videoFile = path.join(paths.work, "fast.mp4");
     step("single pass (cuts + captions)");
-    await renderFast({ project, dir, masterPath, outFile: videoFile, size, fps, vargs });
+    const fastResult = await renderFast({ project, dir, masterPath, outFile: videoFile, size, fps, vargs });
+    captionInfo = fastResult.captions;
   } else {
     const baseFile = path.join(paths.work, "base.mp4");
     step(`base video (${encoder})`);
@@ -892,7 +969,7 @@ export async function renderProject(dir, { preview = false, outro = false } = {}
 
     step("overlays");
     const overlaid = path.join(paths.work, "overlaid.mp4");
-    overlayCount = await applyOverlays(project, dir, zoomed, overlaid, size, fps, vargs);
+    overlayCount = await applyOverlays(project, dir, zoomed, overlaid, size, fps, vargs, fullSize);
 
     step("captions");
     const captioned = path.join(paths.work, "captioned.mp4");

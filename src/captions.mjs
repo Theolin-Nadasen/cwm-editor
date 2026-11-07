@@ -76,16 +76,17 @@ export function buildAss(project, transcript, renderSize = null) {
   const theme = getTheme(project.theme);
   const cap = theme.caption;
   const title = theme.title;
-  const fontSize = project.captions.fontSize ?? Math.round(h / (portrait ? 15 : 18));
+  const fontSize =
+    project.captions.fontSize ?? Math.round(h / (portrait ? 27 : 18));
   const titleSize = Math.round(fontSize * 1.15);
   const scale = h / 1080;
   const capOutline = Math.max(1, Math.round(cap.outlineWidth * scale));
   const capSpacing = Math.round(cap.spacing * scale * 10) / 10;
   const titleOutline = Math.max(1, Math.round(title.outlineWidth * scale));
   const titleSpacing = Math.round(title.spacing * scale * 10) / 10;
-  const marginV = portrait ? Math.round(h * 0.14) : Math.round(h * 0.07);
+  const marginV = portrait ? Math.round(h * 0.15) : Math.round(h * 0.07);
   const titleMarginV = Math.round(h * 0.05);
-  const maxChars = portrait ? 24 : 38;
+  const maxChars = portrait ? 20 : 38;
   const words = transcript && project.captions.enabled ? wordsInEditedTime(project, transcript) : [];
   const lines = groupLines(words, maxChars);
 
@@ -122,10 +123,20 @@ export function buildAss(project, transcript, renderSize = null) {
   for (const overlay of project.overlays ?? []) {
     if (overlay.kind !== "text") continue;
     const at = masterToEdited(project, overlay.at);
-    const alignment = { top: 8, center: 5, bottom: 2 }[overlay.pos] ?? 2;
+    const anchors = {
+      top: { an: 8, x: w / 2, y: h * (portrait ? 0.11 : 0.08) },
+      "top-left": { an: 7, x: w * 0.06, y: h * (portrait ? 0.11 : 0.08) },
+      "top-right": { an: 9, x: w * 0.94, y: h * (portrait ? 0.11 : 0.08) },
+      center: { an: 5, x: w / 2, y: h * 0.5 },
+      bottom: { an: 2, x: w / 2, y: h * (portrait ? 0.85 : 0.93) },
+      "bottom-left": { an: 1, x: w * 0.06, y: h * (portrait ? 0.85 : 0.93) },
+      "bottom-right": { an: 3, x: w * 0.94, y: h * (portrait ? 0.85 : 0.93) },
+    };
+    const anchor = anchors[overlay.pos] ?? anchors.bottom;
     const text = upper(cleanWord(overlay.text), title.uppercase);
     events.push(
-      `Dialogue: 1,${assTime(at)},${assTime(at + overlay.dur)},Title,,0,0,0,,{\\an${alignment}\\fad(120,120)}${text}`,
+      `Dialogue: 1,${assTime(at)},${assTime(at + overlay.dur)},Title,,0,0,0,,` +
+        `{\\an${anchor.an}\\pos(${Math.round(anchor.x)},${Math.round(anchor.y)})\\fad(120,120)}${text}`,
     );
   }
 

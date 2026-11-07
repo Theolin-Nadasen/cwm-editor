@@ -111,4 +111,17 @@ const fast = cwmeditor(["preview", fastProject]);
 if (!fast.fast) throw new Error("Expected the single-pass fast path");
 if (!fs.existsSync(fast.output)) throw new Error("Fast path output missing");
 
+// Vertical: a 16:9 source should pad with blur, not crop, and portrait cards should render.
+const vertical = path.join(tmp, "vertical");
+const vinit = cwmeditor(["init", vertical, "--source", master, "--preset", "tiktok", "--name", "vertical"]);
+if (vinit.format !== "1080x1920 @ 30fps") throw new Error(`Bad vertical format: ${vinit.format}`);
+if (vinit.fit !== "blur") throw new Error(`Bad vertical fit: ${vinit.fit}`);
+cwmeditor(["text", vertical, "--at", "0.5", "--text", "POV: vertical", "--pos", "bottom"]);
+cwmeditor(["chat", vertical, "--at", "2", "--msgs", "one|two|three", "--dur", "2"]);
+const vfmt = cwmeditor(["format", vertical, "--fit", "pad"]);
+if (vfmt.fit !== "pad") throw new Error(`format did not update fit: ${vfmt.fit}`);
+const vprev = cwmeditor(["preview", vertical]);
+if (vprev.size !== "540x960") throw new Error(`Bad vertical preview size: ${vprev.size}`);
+if (!fs.existsSync(vprev.output)) throw new Error("Vertical preview missing");
+
 console.log("\nSMOKE OK");
