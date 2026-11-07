@@ -54,6 +54,15 @@ function open(dir) {
   return project;
 }
 
+// Render paths are accepted either from the current directory or relative to
+// the project (out/name.mp4), which is how every other command refers to files.
+function inputPath(dir, file) {
+  if (!file) return null;
+  const absolute = path.resolve(file);
+  if (fs.existsSync(absolute)) return absolute;
+  return resolveMember(dir, file);
+}
+
 function print(value) {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 }
@@ -732,14 +741,14 @@ async function main() {
     }
 
     case "qc": {
-      const file = flags.file ?? latestOutput(dir);
+      const file = flags.file ? inputPath(dir, flags.file) : latestOutput(dir);
       if (!file) throw new Error("No render found. Run: cwmeditor render <dir>");
       print({ ok: true, ...(await qc(dir, project, file)) });
       break;
     }
 
     case "review": {
-      const result = await buildReview(dir, project, flags.file ?? null);
+      const result = await buildReview(dir, project, flags.file ? inputPath(dir, flags.file) : null);
       print({ ok: true, ...result });
       break;
     }

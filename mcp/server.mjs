@@ -25,7 +25,7 @@ import { applyPlan, loadPlan, planDiff, savePlan, suggestPlan, validatePlan } fr
 import { listSfx } from "../src/sfx.mjs";
 import { round } from "../src/util.mjs";
 
-const SERVER_INFO = { name: "cwmeditor", version: "0.1.0" };
+const SERVER_INFO = { name: "cwmeditor", version: "0.2.0" };
 
 const dirSchema = {
   type: "object",

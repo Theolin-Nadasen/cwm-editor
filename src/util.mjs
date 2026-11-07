@@ -51,10 +51,15 @@ export async function probe(file) {
   const data = JSON.parse(stdout);
   const video = data.streams.find((s) => s.codec_type === "video");
   const audio = data.streams.find((s) => s.codec_type === "audio");
+  const rotation = Number(
+    video?.side_data_list?.find((entry) => entry.rotation !== undefined)?.rotation ?? 0,
+  );
+  const swapped = Math.abs(rotation) % 180 === 90;
   return {
     duration: Number(data.format?.duration ?? video?.duration ?? 0),
-    width: video?.width ?? null,
-    height: video?.height ?? null,
+    width: swapped ? video?.height ?? null : video?.width ?? null,
+    height: swapped ? video?.width ?? null : video?.height ?? null,
+    rotation,
     fps: parseFps(video?.r_frame_rate),
     hasVideo: Boolean(video),
     hasAudio: Boolean(audio),

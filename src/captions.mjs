@@ -136,7 +136,7 @@ export function buildAss(project, transcript, renderSize = null) {
     const text = upper(cleanWord(overlay.text), title.uppercase);
     events.push(
       `Dialogue: 1,${assTime(at)},${assTime(at + overlay.dur)},Title,,0,0,0,,` +
-        `{\\an${anchor.an}\\pos(${Math.round(anchor.x)},${Math.round(anchor.y)})\\fad(120,120)}${text}`,
+        `{\\an${anchor.an}\\pos(${Math.round(anchor.x)},${Math.round(anchor.y)})\\4a&H66&\\fad(120,120)}${text}`,
     );
   }
 

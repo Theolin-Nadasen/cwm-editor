@@ -10,6 +10,8 @@ Timeline as data, ffmpeg as the renderer, agent on top. Built because the existi
 - **Ops are undoable.** Each change snapshots the project, capped at 25 steps.
 - **Dry run first.** `cut-preview` reports removed words and new duration before anything is written.
 - **Fast preview path.** Half resolution, ultrafast preset. The agent must be able to render and look in seconds.
+- **One timeline, any frame.** Landscape, vertical, square and short-form are project formats, not separate pipelines. `fit` decides whether a mismatched source is cropped, blurred or padded.
+- **Use display dimensions.** Phone clips often store landscape dimensions with a rotation flag. `probe` reads the rotation and reports the size the viewer actually sees.
 
 ## Done (milestone 1 + 2)
 
@@ -28,6 +30,8 @@ Timeline as data, ffmpeg as the renderer, agent on top. Built because the existi
 - `gag-scan` transcript scanner with density rules and per-project overrides
 - Single-pass render when there is no B-roll or memes, plus NVENC
 - Excerpt init for fast iteration
+- Vertical and short-form: presets, cover/blur/pad fit, native 9:16 detection, portrait safe bands and card scaling
+- `format` command and MCP tool, plus rotation-aware probing for phone recordings
 - CLI and MCP server
 - Smoke test that builds a synthetic project end to end
 
@@ -39,11 +43,16 @@ Timeline as data, ffmpeg as the renderer, agent on top. Built because the existi
 4. **B-roll matching.** Keyword to clip matching against the theme pools and a Pexels/Pixabay index.
 5. **Batch mode.** Run a folder of recordings through the same edit profile.
 6. **Transitions.** Crossfades and whooshes between B-roll slots, kept optional and fast.
-7. **Migrate one real video** from the old pipeline and compare render time and quality.
+7. **Overlay collision checks.** Two gags should not land in the same corner and stack, and a text CTA should not sit on the caption band.
+8. **Transcript word fixes.** A small `transcript-fix --from thio --to Theo` command instead of editing the JSON by hand.
+9. **Auto format at init.** Use the probed display aspect to pick landscape or vertical when no preset is given.
+10. **Screen-recording crop.** Detect the screen area in a phone-recorded laptop clip and crop the keyboard out before fitting.
+11. **Export presets.** TikTok, Reels and Shorts bitrate and container profiles.
+12. **Migrate one real video** from the old pipeline and compare render time and quality.
 
 ## Open questions
 
-- Does he want filler removal to auto-propose or only respond on request?
+- Should filler removal auto-propose or only respond on request?
 - Meme library ownership: build a local pack from generated reactions, or start from royalty-free clips?
-- Should `caption` support two-line blocks for 9:16, or one line only?
+- How should the editor reserve a lower-third slot so a CTA never lands on the caption band?
 - Do we need a proxy workflow for 4K screen recordings, or is 1080p enough?

@@ -34,6 +34,12 @@ Visual gags and other concepts we like but are not building yet. Move an item ou
 
 ## Other
 
+- **Caption-safe lower third**: a dedicated slot above the captions for CTAs, so text never lands on the subtitle line
+- **Overlay collision solver**: detect two gags in the same band and offset or delay one
+- **Transcript word fixer**: `transcript-fix --from thio --to Theo`, applied to words and segment text
+- **Auto-format init**: pick vertical or landscape from the probed display aspect when no preset is passed
+- **Rotation warning**: flag non-zero rotation metadata at init so a portrait clip is never treated as landscape
+- **Screen deskew**: perspective-correct a phone recording of a laptop screen before cropping the keyboard out
 - **Auto-emit gags from the scanner**: keycaps on "shortcut", command card on shell commands, stamp on "broken"
 - **Cursor logger**: record mouse position so zooms can target the real cursor
 - **Batch mode**: run a folder of recordings through one edit profile

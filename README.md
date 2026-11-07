@@ -83,7 +83,7 @@ node cwmeditor.mjs format projects/short --fit pad
 - `blur` fits the whole source and fills the rest with a blurred copy. Vertical projects default to this, so a 16:9 screen recording keeps the entire screen.
 - `pad` adds black bars.
 
-Captions switch to 20 character lines, a smaller portrait font and a 15% bottom margin. Gags scale up on portrait so text stays readable on a phone, and they sit in a safe band clear of the top tabs and the bottom caption and username area. A source that is already vertical fills the frame with no padding. Card PNGs are generated at full project resolution and scaled down for previews, so the preview matches the final layout.
+Captions switch to 20 character lines, a smaller portrait font and a 15% bottom margin. Gags scale up on portrait so text stays readable on a phone, and they sit in a safe band clear of the top tabs and the bottom caption and username area. A source that is already vertical fills the frame with no padding. Phone recordings are read through ffprobe's rotation metadata, so a file stored as 1920x1080 with a -90 flag is treated as 1080x1920 instead of being blur padded. Card PNGs are generated at full project resolution and scaled down for previews, so the preview matches the final layout.
 
 ## Screenshots
 
@@ -151,7 +151,7 @@ Cuts, B-roll and overlays are stored in master time internally so adding a cut l
 | `undo` | Roll back the last timeline change |
 | `ops` | Dump cuts, B-roll and overlays as JSON |
 
-All times accept `12.5`, `1:02.5` or `0:01:02.50`.
+All times accept `12.5`, `1:02.5` or `0:01:02.50`. `qc` and `review` accept `--file out/name.mp4` or a path from the current directory.
 
 ## Agent surface (MCP)
 
@@ -379,6 +379,10 @@ Keep a local library in `memes/`. Tenor's API was shut down in June 2026, and Gi
 - `render` uses loudnorm to hit -14 LUFS for YouTube; previews are normalised too, so they match the final.
 - The outro appender is reused from the CWM pipeline (`add-outro.ps1`), override with `ADD_OUTRO_PS1`.
 - `node tests/smoke.mjs` builds a synthetic project and checks render, captions, QC and review.
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
